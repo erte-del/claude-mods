@@ -1,0 +1,27 @@
+{
+  "name": "repo",
+  "version": "0.2.0",
+  "description": "Pick a GitHub repo at session start or with /repo: fuzzy-match your repos, clone if missing, cd into it, and keep it as the session's active repo.",
+  "author": { "name": "erte-del" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "owner": {
+      "type": "string",
+      "title": "GitHub owner",
+      "description": "User or org whose repos to list. Empty: whoever is logged in to gh.",
+      "default": ""
+    },
+    "cloneDir": {
+      "type": "string",
+      "title": "Clone folder",
+      "description": "Where missing repos are cloned. Empty: ~/repos.",
+      "default": ""
+    },
+    "openOnStart": {
+      "type": "boolean",
+      "title": "Open picker on start",
+      "description": "Open the repo picker when a session starts with no active repo.",
+      "default": true
+    }
+  }
+}

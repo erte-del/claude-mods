@@ -19,6 +19,11 @@
       "name": "handoff",
       "source": "./mods/handoff",
       "description": "One-click handoff: asks Claude to write handoff.md, waits until it exists, runs /clear, then has the fresh chat read handoff.md and continue. /handoff, or the sidebar button."
+    },
+    {
+      "name": "repo",
+      "source": "./mods/repo",
+      "description": "Pick a GitHub repo at session start or with /repo: fuzzy-match your repos, clone if missing, cd into it, and keep it as the session's active repo."
     }
   ]
 }
