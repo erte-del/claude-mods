@@ -1,6 +1,7 @@
 # claude-mods
 
-<img width="395" height="922" alt="image" src="https://github.com/user-attachments/assets/537a1490-01bb-4ecc-834b-6a86a2306c92" />
+<img width="391" height="379" alt="image" src="https://github.com/user-attachments/assets/6a3cb2d9-57cb-47e2-84c0-6cfc547499c3" />
+
 
 
 Small mods for [Claude Code](https://claude.com/claude-code): a live sidebar with one-click buttons for the things you do every session, and a repo picker. Works on Windows, macOS and Linux.
