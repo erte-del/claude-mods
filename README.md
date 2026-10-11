@@ -1,5 +1,7 @@
 # claude-mods
 
+<img width="391" height="340" alt="image" src="https://github.com/user-attachments/assets/ab5d3bad-6247-4ed9-a676-66b214eab3f4" />
+
 Mods for [Claude Code](https://claude.com/claude-code), published as a plugin marketplace.
 
 | Mod | What it does |
