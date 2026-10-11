@@ -1,0 +1,9 @@
+{
+  "name": "commit-push",
+  "version": "0.1.0",
+  "description": "One-click Commit & Push: stages the active repo's changes, has Claude write a conventional commit message from the diff, commits and pushes (setting the upstream if needed). /commit-push, or the sidebar button.",
+  "author": {
+    "name": "erte-del"
+  },
+  "types": "./types/index.d.ts"
+}

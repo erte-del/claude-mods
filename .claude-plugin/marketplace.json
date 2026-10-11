@@ -8,7 +8,17 @@
     {
       "name": "sidebar",
       "source": "./mods/sidebar",
-      "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost and 5-hour / weekly usage dial, with a reload-plugins button."
+      "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost, 5-hour / weekly usage dial, plus Commit & Push and Handoff buttons (from the commit-push and handoff mods)."
+    },
+    {
+      "name": "commit-push",
+      "source": "./mods/commit-push",
+      "description": "One-click Commit & Push: stages the active repo's changes, has Claude write a conventional commit message from the diff, commits and pushes (setting the upstream if needed). /commit-push, or the sidebar button."
+    },
+    {
+      "name": "handoff",
+      "source": "./mods/handoff",
+      "description": "One-click handoff: asks Claude to write handoff.md, waits until it exists, runs /clear, then has the fresh chat read handoff.md and continue. /handoff, or the sidebar button."
     }
   ]
 }

@@ -6,6 +6,12 @@ import type { Gauge, Limit } from '../types'
 const PANE = 'sidebar'
 const gauge =atom({ plugin: 'sidebar', key: 'gauge' } as const, null)
 const limits = atom({ plugin: 'sidebar', key: 'limits' } as const, [] as Limit[])
+// Owned by the commit-push mod; the sidebar only draws it and presses its command.
+const commitPush = atom({ plugin: 'commit-push', key: 'run' } as const, {
+  phase: 'idle', step: '', repo: '', branch: '', message: '', sha: '', target: '', summary: '', detail: '',
+})
+// Owned by the handoff mod.
+const handoff = atom({ plugin: 'handoff', key: 'run' } as const, { phase: 'idle', summary: '', path: '' })
 
 // ---- speedometer: two concentric half circles drawn with braille dots (2x4 per cell) ----
 const DW = 34 // dial grid width in dots (17 cells); the arcs use the left 30 dots
@@ -163,6 +169,35 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
     )
   }
 
+  const cp = await read($, commitPush)
+  const cpBusy = cp.phase === 'running'
+  const cpColor = cp.phase === 'done' ? 'green' : cp.phase === 'nothing' ? undefined : cp.phase === 'blocked' ? 'yellow' : 'red'
+  const cpMark = cp.phase === 'done' ? '✓ ' : cp.phase === 'nothing' ? '· ' : cp.phase === 'blocked' ? '! ' : '✗ '
+  const commitButton = (
+    <Button key="commit-push" onPress={() => void (cpBusy ? undefined : $.command.run({ command: 'commit-push' }))}>
+      {cpBusy ? '… Committing' : '⇡ Commit & Push'}
+    </Button>
+  )
+  const commitResult = cpBusy ? (
+    <Text dimColor>{cp.step}</Text>
+  ) : cp.phase === 'idle' ? null : (
+    <Box flexDirection="column">
+      <Text color={cpColor} bold>{`${cpMark}${cp.summary}`}</Text>
+      {cp.message ? <Text>{cp.message}</Text> : null}
+      {cp.detail ? <Text dimColor>{cp.detail.length > 500 ? `${cp.detail.slice(0, 499)}…` : cp.detail}</Text> : null}
+    </Box>
+  )
+
+  const ho = await read($, handoff)
+  const hoBusy = ho.phase === 'writing' || ho.phase === 'clearing'
+  const hoColor = ho.phase === 'done' ? 'green' : ho.phase === 'error' ? 'red' : undefined
+  const handoffButton = (
+    <Button key="handoff" onPress={() => void (hoBusy ? undefined : $.command.run({ command: 'handoff' }))}>
+      {hoBusy ? '… Handing off' : '⇄ Handoff'}
+    </Button>
+  )
+  const handoffResult = ho.phase === 'idle' ? null : <Text color={hoColor} dimColor={hoBusy}>{ho.summary}</Text>
+
   const sep = vertical ? null : <Text dimColor>{'  │  '}</Text>
   return (
     <Box flexDirection={vertical ? 'column' : 'row'}>
@@ -189,11 +224,23 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
       {speedo}
       {vertical ? (
         <Box flexGrow={1} flexDirection="column" justifyContent="flex-end" marginTop={1}>
+          {commitResult}
+          {commitButton}
+          {handoffResult}
+          {handoffButton}
           <Button key="reload" onPress={() => void $.command.run({ command: 'reload-plugins' })}>
             {'↻ Reload plugins'}
           </Button>
         </Box>
-      ) : null}
+      ) : (
+        <Box>
+          {sep}
+          {commitButton}
+          {cpBusy || cp.phase === 'idle' ? null : <Text color={cpColor}>{` ${cpMark}${cp.summary}`}</Text>}
+          <Text> </Text>
+          {handoffButton}
+        </Box>
+      )}
     </Box>
   )
 }

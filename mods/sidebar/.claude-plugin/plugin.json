@@ -1,8 +1,12 @@
 {
   "name": "sidebar",
   "version": "0.1.0",
-  "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost and 5-hour / weekly usage dial, with a reload-plugins button.",
+  "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost, 5-hour / weekly usage dial, plus Commit & Push and Handoff buttons (from the commit-push and handoff mods).",
   "types": "./types/index.d.ts",
+  "dependencies": [
+    "commit-push",
+    "handoff"
+  ],
   "author": {
     "name": "erte-del"
   }

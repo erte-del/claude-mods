@@ -1,0 +1,9 @@
+{
+  "name": "handoff",
+  "version": "0.1.0",
+  "description": "One-click handoff: asks Claude to write handoff.md, waits until it exists, runs /clear, then has the fresh chat read handoff.md and continue. /handoff, or the sidebar button.",
+  "author": {
+    "name": "erte-del"
+  },
+  "types": "./types/index.d.ts"
+}
