@@ -1,0 +1,9 @@
+{
+  "name": "sidebar",
+  "version": "0.1.0",
+  "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost and 5-hour / weekly usage dial, with a reload-plugins button.",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "erte-del"
+  }
+}

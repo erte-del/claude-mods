@@ -1,0 +1,14 @@
+{
+  "name": "claude-mods",
+  "description": "Claude Code mods by erte-del",
+  "owner": {
+    "name": "erte-del"
+  },
+  "plugins": [
+    {
+      "name": "sidebar",
+      "source": "./mods/sidebar",
+      "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost and 5-hour / weekly usage dial, with a reload-plugins button."
+    }
+  ]
+}
