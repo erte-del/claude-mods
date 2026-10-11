@@ -9,5 +9,19 @@
   ],
   "author": {
     "name": "erte-del"
+  },
+  "userConfig": {
+    "budgetUsd": {
+      "type": "number",
+      "title": "Cost bar budget (USD)",
+      "description": "The session cost that fills the cost bar.",
+      "default": 5
+    },
+    "ascii": {
+      "type": "boolean",
+      "title": "ASCII only",
+      "description": "Draw bars with # and - instead of block characters, and skip the usage dial.",
+      "default": false
+    }
   }
 }
