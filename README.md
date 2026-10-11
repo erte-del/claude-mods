@@ -6,7 +6,7 @@ Mods for [Claude Code](https://claude.com/claude-code), published as a plugin ma
 
 | Mod | What it does |
 | --- | --- |
-| `sidebar` | Live sidebar: model badge, context-window gauge, session cost, 5-hour / weekly usage dial, and the buttons below. Installing it also installs `commit-push` and `handoff`. |
+| `sidebar` | Live sidebar: model badge, context-window gauge, session cost, 5-hour / weekly usage dial, a **＋ New chat** button (just runs `/clear`), and the buttons below. Installing it also installs `commit-push` and `handoff`. |
 | `commit-push` | **⇡ Commit & Push** button and `/commit-push`. Stages everything, has Claude write a conventional-commit message from the diff, commits, and pushes (setting the upstream if there is none). |
 | `handoff` | **⇄ Handoff** button and `/handoff`. Has Claude write `handoff.md`, then runs `/clear` and has the fresh chat read it and carry on. |
 

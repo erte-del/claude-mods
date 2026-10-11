@@ -8,7 +8,7 @@
     {
       "name": "sidebar",
       "source": "./mods/sidebar",
-      "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost, 5-hour / weekly usage dial, plus Commit & Push and Handoff buttons (from the commit-push and handoff mods)."
+      "description": "A live widget sidebar for Claude Code: model badge, context-window gauge, session cost, 5-hour / weekly usage dial, plus New chat, Commit & Push and Handoff buttons (from the commit-push and handoff mods)."
     },
     {
       "name": "commit-push",

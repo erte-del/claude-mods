@@ -196,6 +196,11 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
       {hoBusy ? '… Handing off' : '⇄ Handoff'}
     </Button>
   )
+  const newChatButton = (
+    <Button key="new-chat" onPress={() => void $.command.run({ command: 'clear' })}>
+      {'＋ New chat'}
+    </Button>
+  )
   const handoffResult = ho.phase === 'idle' ? null : <Text color={hoColor} dimColor={hoBusy}>{ho.summary}</Text>
 
   const sep = vertical ? null : <Text dimColor>{'  │  '}</Text>
@@ -228,6 +233,7 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
           {commitButton}
           {handoffResult}
           {handoffButton}
+          {newChatButton}
           <Button key="reload" onPress={() => void $.command.run({ command: 'reload-plugins' })}>
             {'↻ Reload plugins'}
           </Button>
@@ -239,6 +245,8 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
           {cpBusy || cp.phase === 'idle' ? null : <Text color={cpColor}>{` ${cpMark}${cp.summary}`}</Text>}
           <Text> </Text>
           {handoffButton}
+          <Text> </Text>
+          {newChatButton}
         </Box>
       )}
     </Box>
