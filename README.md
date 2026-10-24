@@ -12,6 +12,7 @@ Small mods for [Claude Code](https://claude.com/claude-code): a live sidebar wit
 | **commit-push** | One click to stage, commit (with a Claude-written message) and push |
 | **handoff** | One click to save a `handoff.md`, clear the chat, and continue from it |
 | **repo** | Pick a GitHub repo, clone it if needed, and move the session into it |
+| **restart-ultron-backend** | A Restart backend button in a sidebar pane, active only in the `ULTRON_cBrain` folder |
 
 ## Install
 

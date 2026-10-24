@@ -24,6 +24,11 @@
       "name": "repo",
       "source": "./mods/repo",
       "description": "Pick a GitHub repo at session start or with /repo: fuzzy-match your repos, clone if missing, cd into it, and keep it as the session's active repo."
+    },
+    {
+      "name": "restart-ultron-backend",
+      "source": "./mods/restart-ultron-backend",
+      "description": "A Restart backend button in a sidebar pane, active only in the ULTRON_cBrain folder."
     }
   ]
 }
