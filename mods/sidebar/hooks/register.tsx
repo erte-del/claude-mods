@@ -1,11 +1,15 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Gauge, Limit } from '../types'
+import type { Gauge, Life, Limit } from '../types'
 
 const PANE = 'sidebar'
 const gauge =atom({ plugin: 'sidebar', key: 'gauge' } as const, null)
 const limits = atom({ plugin: 'sidebar', key: 'limits' } as const, [] as Limit[])
+const life = atom({ plugin: 'sidebar', key: 'lifetime' } as const, { tokens: 0, usd: 0, inTok: 0, outTok: 0, inUsd: 0, outUsd: 0 } as Omit<Life, 'sid' | 'last'>)
+const tab = atom({ plugin: 'sidebar', key: 'tab' } as const, 'main' as 'main' | 'usage')
+// Animation frame for the Usage scene; ticks only while a turn runs.
+const frame = atom({ plugin: 'sidebar', key: 'frame' } as const, 0)
 // Owned by the commit-push mod; the sidebar only draws it and presses its command.
 const commitPush = atom({ plugin: 'commit-push', key: 'run' } as const, {
   phase: 'idle', step: '', repo: '', branch: '', message: '', sha: '', target: '', summary: '', detail: '',
@@ -80,12 +84,48 @@ const badge = (id: string): string => {
   return `${m[1][0].toUpperCase()}${m[1].slice(1).toLowerCase()} ${m[2].replace(/-/g, '.')}`
 }
 
+const big = (n: number): string => (n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : k(n))
+
+// Estimated output price, $ per million tokens, fitted from recorded session costs; input cost is the exact remainder.
+const outPrice = (model: string): number =>
+  /opus/.test(model) ? 18.8 : /sonnet-5-5/.test(model) ? 9 : /haiku-4/.test(model) ? 4.5 : /haiku/.test(model) ? 2.1 : 10
+
+// Adds this turn's tokens and the session-cost growth since last time to the persisted lifetime totals.
+// ponytail: a session id change or a cost drop (e.g. /clear) is treated as a fresh counter; exact ledger if that drifts.
+async function accrue($: any, turn: { inp: number; out: number; model: string }, usage: any): Promise<void> {
+  // Durable copy lives beside the plugin dirs (~/.claude/sidebar-lifetime.json), so it outlives reinstalls; the store is the fallback.
+  const file = `${String($.plugin.root).split('/plugins/')[0]}/sidebar-lifetime.json`
+  const zero: Life = { tokens: 0, usd: 0, inTok: 0, outTok: 0, inUsd: 0, outUsd: 0, sid: 0, last: 0 }
+  let s: Life = { ...zero, ...(await $.store.get('life')) }
+  try {
+    const f: Life = JSON.parse(await $.fs.read(file))
+    if (f.tokens >= s.tokens) s = { ...zero, ...f }
+  } catch {}
+  const usd: number = usage.cost?.usd ?? 0
+  const base = s.sid === usage.startedAt ? s.last : 0
+  const d = usd >= base ? usd - base : usd
+  const out = Math.min(d, (turn.out * outPrice(turn.model)) / 1e6)
+  s.tokens += turn.inp + turn.out
+  s.inTok += turn.inp
+  s.outTok += turn.out
+  s.usd += d
+  s.outUsd += out
+  s.inUsd += d - out
+  s.sid = usage.startedAt
+  s.last = usd
+  await $.store.set('life', s)
+  await $.fs.write(file, JSON.stringify(s))
+  await update($, life, () => s)
+}
+
 const k = (n: number): string => (n >= 1000 ? `${Math.round(n / 100) / 10}k` : `${n}`)
 
 // Real figures from the last API response: input + cache reads/writes (system prompt, tool results, history).
-async function refresh($: any, answered?: string): Promise<void> {
+async function refresh($: any, answered?: string, turn = { inp: 0, out: 0 }): Promise<void> {
   const model: string = answered ?? (await $.session.model())
-  const { context, cost, rateLimits } = await $.session.usage()
+  const usage = await $.session.usage()
+  const { context, cost, rateLimits } = usage
+  await accrue($, { ...turn, model }, usage)
   const next: Gauge | null =
     context.tokens === undefined
       ? null
@@ -123,6 +163,7 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
   const [costOn, costOff] = bar(costPct / 100)
   const costColor = colorFor(costPct)
 
+  const lt = await read($, life)
   const lims: Limit[] = await read($, limits)
   const week = lims.find((l) => l.kind === 'seven_day') ?? null
   const five = lims.find((l) => l.kind === 'five_hour') ?? null
@@ -204,8 +245,8 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
   const handoffResult = ho.phase === 'idle' ? null : <Text color={hoColor} dimColor={hoBusy}>{ho.summary}</Text>
 
   const sep = vertical ? null : <Text dimColor>{'  │  '}</Text>
-  return (
-    <Box flexDirection={vertical ? 'column' : 'row'}>
+  const body = (
+    <Box flexDirection={vertical ? 'column' : 'row'} flexGrow={1}>
       <Box>
         <Text color="cyan" bold>{g === null ? 'model --' : `● ${badge(g.model)}`}</Text>
       </Box>
@@ -226,6 +267,14 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
         {vertical ? null : <Text dimColor>{` of $${budget}`}</Text>}
       </Box>
       {sep}
+      {vertical ? null : (
+        <Box>
+          <Text bold>{'Lifetime '}</Text>
+          <Text color="cyan" bold>{`${big(lt.tokens)} tok`}</Text>
+          <Text bold>{` · $${lt.usd.toFixed(2)}`}</Text>
+        </Box>
+      )}
+      {vertical ? null : sep}
       {speedo}
       {vertical ? (
         <Box flexGrow={1} flexDirection="column" justifyContent="flex-end" marginTop={1}>
@@ -251,9 +300,104 @@ async function draw($: any, e: any, vertical: boolean, options: any) {
       )}
     </Box>
   )
+  if (!vertical) return body
+
+  const t = await read($, tab)
+  const CLAUDE = '#D97757'
+  const GOLD = 'yellow' // named theme colour: hex values were not rendering as gold
+  // Usage scene: Claude drops tokens into an IN tube and an OUT tube; both drain into a tub with Claude lying in it.
+  const ctr = (x: string, w: number): string => {
+    const l = Math.floor((w - x.length) / 2)
+    return ' '.repeat(Math.max(0, l)) + x + ' '.repeat(Math.max(0, w - x.length - l))
+  }
+  const money = (n: number): string => (n >= 1e4 ? `$${(n / 1e3).toFixed(1)}k` : `$${n.toFixed(2)}`)
+  const line = (...p: [string, string?][]) => (
+    <Box>{p.map(([x, c], i) => (c ? <Text key={i} color={c}>{x}</Text> : <Text key={i}>{x}</Text>))}</Box>
+  )
+  const tube = (label: string, tok: number, cost: number, c: string): [string, string][] => [
+    [`│${ctr(label, 8)}│`, c], [`│${ctr(big(tok), 8)}│`, c], [`│${ctr(money(cost), 8)}│`, c],
+  ]
+  // Six gold coins drop from Claude's hands (columns 6 and 14) down into the tubes. Each runs 7-frame cycles with a
+  // hashed start delay and sideways drift, so the order looks random; row 0 is Claude's feet row, row 4 is inside the tube.
+  const hash = (a: number, b: number): number => {
+    let x = Math.imul(a, 374761393) + Math.imul(b, 668265263)
+    x = Math.imul(x ^ (x >>> 13), 1274126177)
+    return (x ^ (x >>> 16)) >>> 0
+  }
+  const f = await read($, frame)
+  const feet = '        ▘▘ ▝▝'
+  // Runs of equal colour become one Text, so blank cells never draw as their own styled boxes.
+  const segments = (cells: { ch: string; c?: string }[]): [string, string?][] => {
+    const out: [string, string?][] = []
+    for (const x of cells) {
+      const last = out[out.length - 1]
+      if (last && last[1] === x.c) last[0] += x.ch
+      else out.push([x.ch, x.c])
+    }
+    return out
+  }
+  const drops = [0, 1, 2, 3].map((row) => {
+    const cells = Array.from({ length: 22 }, (_, i) => ({ ch: (row === 0 ? feet[i] : ' ') ?? ' ', c: row === 0 ? CLAUDE : undefined as string | undefined }))
+    for (let i = 0; i < 6 && f > 0; i++) {
+      const t = f + i * 2
+      const cycle = Math.floor(t / 7)
+      const at = (t % 7) - (hash(cycle, i) % 3)
+      if (at !== row) continue
+      const col = (i % 2 ? 14 : 6) + ((hash(cycle, i + 9) % 3) - 1) * Math.min(row, 2)
+      cells[col] = { ch: '•', c: GOLD }
+    }
+    return cells
+  })
+  const jig = f % 2 ? '·  ◦  ·   ◦  · ◦' : '◦  ·  ◦   ·  ◦ ◦'
+  const inT = tube('IN', lt.inTok, lt.inUsd, 'cyan')
+  const outT = tube('OUT', lt.outTok, lt.outUsd, 'magenta')
+  const usage = (
+    <Box flexDirection="column" flexGrow={1} marginTop={1}>
+      {line(['       ▐▛███▜▌', CLAUDE])}
+      {line(['      ▝▜█████▛▘', CLAUDE])}
+      {drops.map((d) => line(...segments(d)))}
+      {line([' ┌────────┐', 'cyan'], ['┌────────┐', 'magenta'])}
+      {inT.map((t, i) => line([' ' + t[0], 'cyan'], [outT[i][0], 'magenta']))}
+      {line([' └────┬───┘', 'cyan'], ['└────┬───┘', 'magenta'])}
+      {line(['      │         │'])}
+      {line(['      └────┬────┘'])}
+      {line(['           │'])}
+      {line([' ╭─────────┴────────╮'])}
+      {line([' │ ', ], [jig, GOLD], [' │'])}
+      {line([' │', ], ['≈', 'cyan'], ['◦ ', GOLD], ['▐▛███▜▌', CLAUDE], [' ◦ ', GOLD], ['≈◦≈≈≈', 'cyan'], ['│'])}
+      {line([' ╰──────────────────╯'])}
+      {line([` ${big(lt.tokens)} tok · ${money(lt.usd)}`, 'yellow'])}
+      <Text dimColor>{'\n In = prompt + cache.\n Out cost is estimated.'}</Text>
+    </Box>
+  )
+  const tabBtn = (id: 'main' | 'usage', label: string) => (
+    <Button key={id} onPress={() => void update($, tab, () => id)}>
+      {`${t === id ? '●' : '○'} ${label}`}
+    </Button>
+  )
+  return (
+    <Box flexDirection="column" flexGrow={1}>
+      <Box>
+        {tabBtn('main', 'Overview')}
+        <Text>{'  '}</Text>
+        {tabBtn('usage', 'Usage')}
+      </Box>
+      {t === 'usage' ? usage : body}
+    </Box>
+  )
 }
 
 export const register: Register = (on, options) => {
+  let timer: { cancel: () => void } | undefined
+
+  on('turn.start', ($, e, next) => {
+    if (!e.agentId && !timer) {
+      void update($, frame, () => 1) // frame 0 means idle: no coins
+      timer = $.clock.every(250, () => void update($, frame, (n) => n + 1))
+    }
+    return next(e)
+  })
+
   on('session.start', async ($, e, next) => {
     void $.ui.open({ id: PANE, title: 'Sidebar' })
     await refresh($)
@@ -261,8 +405,14 @@ export const register: Register = (on, options) => {
   })
 
   on('turn.complete', async ($, e, next) => {
+    if (!e.agentId) {
+      timer?.cancel()
+      timer = undefined
+      void update($, frame, () => 0)
+    }
     const result = await next(e)
-    await refresh($, e.usage?.model)
+    const u = e.usage
+    await refresh($, u?.model, u ? { inp: u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens, out: u.output_tokens } : undefined)
     return result
   })
 
